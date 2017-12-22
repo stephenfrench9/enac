@@ -11,16 +11,19 @@ from spacy.lang.en import LEMMA_INDEX, LEMMA_EXC, LEMMA_RULES
 #global variables
 sp = spacy.load('en_core_web_sm')
 lemmatizer = Lemmatizer(LEMMA_INDEX, LEMMA_EXC, LEMMA_RULES)
-
-
+n = 10 #number of articles
 
 #helper functions
+
+#Preprocess the paragraph - remove all superscripts
 def removeSup(soupOb):
     references = soupOb.find_all('sup', recursive = False)
     for refer in references:
         throwOut = soupOb.sup.extract()
 
-def disp_sentence(txt: str) -> None:
+#parse paragraph, print to the console, and write to a file.
+#Build the affordance distribution
+def process_paragraph(txt: str) -> None:
     parse = sp(txt)
 
     for token in parse:
@@ -38,21 +41,8 @@ def disp_sentence(txt: str) -> None:
                     str(token),
                     token.pos_))
 
-        # accumalte counts for parts of speech in the array pos_counts, which has a global scope apparently
-
-        if (token.dep_ == 'dobj' and token.pos_ == 'NOUN' and token.head.pos_ == 'VERB'): # and token.head == 'ROOT' and token.head.pos_ == 'VERB'):
-            print(token.pos_)
-            print(type(token.pos_))
-            print()
-            print(token.dep_)
-            print(type(token.dep_))
-            print()
-            print(str(token.head))
-            print(type(str(token.head)))
-            print()
-            print(token.head.pos_)
-            print(type(token.head.pos_))
-            print('the added will be')
+        if (token.dep_ == 'dobj' and token.pos_ == 'NOUN' and token.head.pos_ == 'VERB'):
+            print('An affordance was added to the dictionary')
             print(str(token) + ":" + str(token.head))
             addAffordance(str(token), str(token.head))
 
@@ -71,11 +61,8 @@ def addAffordance(thing, affordance):
         all_affordances[thing] = dict()
         all_affordances[thing][affordance] = 1
 
-
-
-#download, break into paragraphs, parse with respect to syntax, and accumulate statistics
+#download one page, break into paragraphs, parse, print, and save. build affordance distribution.
 def one_page():
-
     url = "https://en.wikipedia.org/wiki/Special:Random"
     # url = "https://en.wikipedia.org/wiki/Polyp" example to deal with special characters that unicode can't represent which sometimes show up in wikipedia
     # url = "https://en.wikipedia.org/wiki/CBC-MAC" example of gibberish from spn tags
@@ -93,42 +80,40 @@ def one_page():
 
     #print the article
     print("ARTICLE NUMBER: " + str(i) + "\n")
-    f.write("\nARTICLE NUMBER: " + str(i) + "\n") #this function is called in a scope which has a varible 'f'
+    f.write("\nARTICLE NUMBER: " + str(i) + "\n")
     for para in allPs:
         # throw out all superscripts
         removeSup(para)
 
-        #Try to throwout all span tags? Get rid of the maths nonsenses
+        #Improvement to implement later: Try to throwout all span tags. (To get rid of the math nonsense)
 
-        #print a paragraph
+        #process one paragraph
         try:
             texts = para.get_text()
             if(texts != ""):
-                print(texts) #print to the console
-                f.write(texts) #f exists in the scope of the calling function
-                disp_sentence(texts) #parse the sentence (apply dependency labels), count parts of speech, save to a global variable that
-                                        #the function has access to.
+                print(texts) #print paragraph to console
+                f.write(texts) #print paragraph to a file
+                process_paragraph(texts) #parse the sentence, build affordance distribution, print parse
         except UnicodeEncodeError:
-            print("dog submarine rick antissima")
+            print("dog submarine rick mantissa")
         print()
         f.write("\n")
 
 #body
 if __name__ == '__main__':
-    #gather and print the data
-    all_affordances = {}
+    all_affordances = {} # collection of affordance distributions
 
+    # save each paragraph and its parse to a file.
     with open('n_wiki_pages','w') as f:
-        for i in range(0,100):
-            one_page() #This function downloads article, cleans it, prints it, saves to a file. Also, accumaltes statistics about the file,
-                        #which are saved in an array called pos_counts
-                        #Is this array which is declared in the child scope accessibel to the parent scope?
+        for i in range(0,n):
+            one_page() #Download article, parse, print, save, and build distributions.
             time.sleep(2)
 
-    #save that array that was created earlier
+    # save the affordances disctionary
     with open('all_affordances.p','wb') as g:
         pickle.dump(all_affordances, g)
 
+    # examine the affordance dictionary
     print("what does my all_afforances dictionary look like?")
     for thing in all_affordances:
         print(thing)
