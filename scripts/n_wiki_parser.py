@@ -11,7 +11,7 @@ from spacy.lang.en import LEMMA_INDEX, LEMMA_EXC, LEMMA_RULES
 #global variables
 sp = spacy.load('en_core_web_sm')
 lemmatizer = Lemmatizer(LEMMA_INDEX, LEMMA_EXC, LEMMA_RULES)
-n = 10 #number of articles
+n = 1 #number of articles
 
 #helper functions
 
@@ -27,7 +27,6 @@ def process_paragraph(txt: str) -> None:
     parse = sp(txt)
 
     for token in parse:
-
         print('{: >2} {: <12} {: <10} ({})'.format(
             token.i,
             '{}/{}'.format(token.dep_, token.head.i),
@@ -42,7 +41,7 @@ def process_paragraph(txt: str) -> None:
                     token.pos_))
 
         if (token.dep_ == 'dobj' and token.pos_ == 'NOUN' and token.head.pos_ == 'VERB'):
-            print('An affordance was added to the dictionary')
+            print('An affordance was added to the dictionary for a sentence structure w/dobj')
             print(str(token) + ":" + str(token.head))
             addAffordance(str(token), str(token.head))
 
@@ -70,6 +69,7 @@ def one_page():
     # download the url
     response = requests.get(url)
     html = response.text
+    print("The type of the html variable is:" + str(type(html)))
     soup = bs4.BeautifulSoup(html, "html.parser")
 
     #get the body of the article
@@ -81,10 +81,11 @@ def one_page():
     #print the article
     print("ARTICLE NUMBER: " + str(i) + "\n")
     f.write("\nARTICLE NUMBER: " + str(i) + "\n")
+    paraNum = 0
     for para in allPs:
         # throw out all superscripts
         removeSup(para)
-
+        paraNum += 1
         #Improvement to implement later: Try to throwout all span tags. (To get rid of the math nonsense)
 
         #process one paragraph
@@ -93,6 +94,7 @@ def one_page():
             if(texts != ""):
                 print(texts) #print paragraph to console
                 f.write(texts) #print paragraph to a file
+                print("We are analyzing the " + str(paraNum) + " paragrah")
                 process_paragraph(texts) #parse the sentence, build affordance distribution, print parse
         except UnicodeEncodeError:
             print("dog submarine rick mantissa")
@@ -104,13 +106,13 @@ if __name__ == '__main__':
     all_affordances = {} # collection of affordance distributions
 
     # save each paragraph and its parse to a file.
-    with open('n_wiki_pages','w') as f:
+    with open('..\\output\\n_wiki_pages','w') as f:
         for i in range(0,n):
             one_page() #Download article, parse, print, save, and build distributions.
             time.sleep(2)
 
     # save the affordances disctionary
-    with open('all_affordances.p','wb') as g:
+    with open('..\\output\\all_affordances.p','wb') as g:
         pickle.dump(all_affordances, g)
 
     # examine the affordance dictionary
