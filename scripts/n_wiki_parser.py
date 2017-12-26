@@ -45,6 +45,11 @@ def process_paragraph(txt: str) -> None:
             print(str(token) + ":" + str(token.head))
             addAffordance(str(token), str(token.head))
 
+        if (token.dep_ == 'nsubjpass' and token.pos_ == 'NOUN' and token.head.pos_ == 'VERB'):
+            print('An affordance was added to the dictionary for a passive sentence structure')
+            print(str(token) + ":" + str(token.head))
+            addAffordance(str(token), str(token.head))
+
     print()
     f.write("\n")
 
