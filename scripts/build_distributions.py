@@ -189,7 +189,7 @@ linesPerSecond = linesProcessed/(finishTime - startTime)
 print("Lines Processed per second is: " + str(linesPerSecond))
 print("Number of lines processed: " + str(linesProcessed))
 
-with open('all_affordances.p','wb') as g:
+with open('...\\output\\all_affordances.p','wb') as g:
     pickle.dump(all_affordances, g)
 
 
