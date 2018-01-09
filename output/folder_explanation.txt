@@ -1,1 +1,0 @@
-n_wiki_parser.py writes to this folder. \n

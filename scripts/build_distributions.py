@@ -133,12 +133,14 @@ def cleanable(line):
 
 # Should we keep the cleaned line?
 def keep(line):
+    like = True
     if('&lt' in line):
         like = False
     elif ( len(line) < 100):
         like = False
     elif( '{' in line):
         like = False
+    return like
 
 f = open(wikiDumpAddress)
 startTime = time.time()
@@ -148,29 +150,25 @@ reg = re.compile('&quot;')
 linesProcessed = 0
 line = True
 while line:
+    if linesProcessed == 200:
+        break
     try:
         line = f.readline()
+        # if linesProcessed < 0:
+        #     linesProcessed += 1
+        #     continue
+        if cleanable(line):
+            line = clean(line)
+            if keep(line):
+                if(line[0] == ':'):
+                    line = line[1:]
+                if(line[0] == ":"):
+                    line = line[1:]
+                process_paragraph(line)
     except UnicodeDecodeError: # occurs more often in python 3
-        linesProcessed += 1
-
-    # if linesProcessed < 0:
-    #     linesProcessed += 1
-    #     continue
-    if linesProcessed == 1000000:
-        break
-
-    if cleanable(line):
-        line = clean(line)
-
-        if keep(line):
-            if(line[0] == ':'):
-                line = line[1:]
-            if(line[0] == ":"):
-                line = line[1:]
-
-            process_paragraph(line)
-
+        line = True
     linesProcessed += 1
+
 
 f.close()
 finishTime = time.time()
@@ -189,7 +187,7 @@ linesPerSecond = linesProcessed/(finishTime - startTime)
 print("Lines Processed per second is: " + str(linesPerSecond))
 print("Number of lines processed: " + str(linesProcessed))
 
-with open('...\\output\\all_affordances.p','wb') as g:
+with open('..\\..\\all_affordances.p','wb') as g:
     pickle.dump(all_affordances, g)
 
 
