@@ -9,6 +9,7 @@ from spacy.lang.en import LEMMA_INDEX, LEMMA_EXC, LEMMA_RULES
 sp = spacy.load('en_core_web_sm')
 lemmatizer = Lemmatizer(LEMMA_INDEX, LEMMA_EXC, LEMMA_RULES)
 wikiDumpAddress = 'E:\enwiki-latest-pages-articles.xml'
+lines_to_process = 10000 #how many lines in the wikiDump should we process?
 
 #dictionary to hold all of the affordances
 all_affordances = {}
@@ -69,9 +70,6 @@ def clean(thisString):
     thisString = ref1.sub("", thisString)
     ref2 = re.compile("&lt;ref.*?&gt;.*?&lt;/ref&gt;")
     thisString = ref2.sub("",thisString)
-
-
-
     hangingRef = re.compile("&lt;ref&gt;.*$")
     thisString = hangingRef.sub("", thisString)
     hangingRef2 = re.compile("&lt;ref.*?&gt;")
@@ -88,6 +86,7 @@ def clean(thisString):
     # hangingCurly = re.compile("{{[^\.]*?$")
     # exoticAlphabet = re.compile("{{lang.*?}}")
 
+    # make replacements
     thisString = quotes.sub("\"", thisString, count = 0)
     thisString = optionsSub(thisString,options)
     thisString = funky.sub("",thisString)
@@ -97,7 +96,6 @@ def clean(thisString):
     thisString = excessiveCitations.sub("",thisString)
     # thisString = hangingCurly.sub("SCAROFCURLY",thisString)
     # thisString = exoticAlphabet.sub("foreign word",thisString)
-
     return(thisString)
 
 # Should we clean the line?
@@ -128,7 +126,6 @@ def cleanable(line):
         keep = False
     elif( '|url' in line):
         keep = False
-
     return(keep)
 
 # Should we keep the cleaned line?
@@ -142,53 +139,54 @@ def keep(line):
         like = False
     return like
 
-f = open(wikiDumpAddress)
-startTime = time.time()
-reg = re.compile('&quot;')
+if __name__ == '__main__':
+    f = open(wikiDumpAddress)
+    startTime = time.time()
+    reg = re.compile('&quot;')
 
-# READ and Analyze.
-linesProcessed = 0
-line = True
-while line:
-    if linesProcessed == 200:
-        break
-    try:
-        line = f.readline()
-        # if linesProcessed < 0:
-        #     linesProcessed += 1
-        #     continue
-        if cleanable(line):
-            line = clean(line)
-            if keep(line):
-                if(line[0] == ':'):
-                    line = line[1:]
-                if(line[0] == ":"):
-                    line = line[1:]
-                process_paragraph(line)
-    except UnicodeDecodeError: # occurs more often in python 3
-        line = True
-    linesProcessed += 1
-
-
-f.close()
-finishTime = time.time()
-
-# print("what does my all_afforances dictionary look like?")
-# for thing in all_affordances:
-#     print(thing)
-#     for affordance in all_affordances[thing]:
-#         print("\t" + affordance + " : " + str(all_affordances[thing][affordance]))
+    # READ and Analyze.
+    linesProcessed = 0
+    line = True
+    while line:
+        if linesProcessed == lines_to_process:
+            break
+        try:
+            line = f.readline()
+            # if linesProcessed < 0:
+            #     linesProcessed += 1
+            #     continue
+            if cleanable(line):
+                line = clean(line)
+                if keep(line):
+                    if(line[0] == ':'):
+                        line = line[1:]
+                    if(line[0] == ":"):
+                        line = line[1:]
+                    process_paragraph(line)
+        except UnicodeDecodeError: # occurs more often in python 3
+            line = True
+        linesProcessed += 1
 
 
-print("Number of things (affordance distributions): " + str(len(all_affordances)))
-print("The program took this long: " + str(finishTime - startTime))
-print("The program processed this many lines: " + str(linesProcessed))
-linesPerSecond = linesProcessed/(finishTime - startTime)
-print("Lines Processed per second is: " + str(linesPerSecond))
-print("Number of lines processed: " + str(linesProcessed))
+    f.close()
+    finishTime = time.time()
 
-with open('..\\..\\all_affordances.p','wb') as g:
-    pickle.dump(all_affordances, g)
+    # print("what does my all_afforances dictionary look like?")
+    # for thing in all_affordances:
+    #     print(thing)
+    #     for affordance in all_affordances[thing]:
+    #         print("\t" + affordance + " : " + str(all_affordances[thing][affordance]))
+
+
+    print("Number of things (affordance distributions): " + str(len(all_affordances)))
+    print("The program took this long: " + str(finishTime - startTime))
+    print("The program processed this many lines: " + str(linesProcessed))
+    linesPerSecond = linesProcessed/(finishTime - startTime)
+    print("Lines Processed per second is: " + str(linesPerSecond))
+    print("Number of lines processed: " + str(linesProcessed))
+
+    with open('..\\..\\all_affordances.p','wb') as g:
+        pickle.dump(all_affordances, g)
 
 
 # NOTES: I have had some trouble reading from the xml file.
