@@ -4,12 +4,13 @@ import spacy
 import pickle
 from spacy.lemmatizer import Lemmatizer
 from spacy.lang.en import LEMMA_INDEX, LEMMA_EXC, LEMMA_RULES
+import argparse
 
+
+# print(parser.Wikidump_Address)
 #global objects
 sp = spacy.load('en_core_web_sm')
 lemmatizer = Lemmatizer(LEMMA_INDEX, LEMMA_EXC, LEMMA_RULES)
-wikiDumpAddress = 'E:\enwiki-latest-pages-articles.xml'
-lines_to_process = 10000 #how many lines in the wikiDump should we process?
 
 #dictionary to hold all of the affordances
 all_affordances = {}
@@ -140,7 +141,17 @@ def keep(line):
     return like
 
 if __name__ == '__main__':
-    f = open(wikiDumpAddress)
+
+    parser = argparse.ArgumentParser(description='Read and parse a wiki dump')
+    parser.add_argument('Wikidump_Address', metavar = 'A', type = str, nargs = 1,
+                        help = 'The address for the dump file' )
+    parser.add_argument('--num_lines', metavar = 'N', type = int, nargs = 1,
+                        default = [-1], help = 'The number of lines to process from \
+                        the wikidump. A value of -1 means the entire dump will be processed. \
+                        The default is to process the entire dump.')
+    args = parser.parse_args()
+
+    f = open(args.Wikidump_Address[0])
     startTime = time.time()
     reg = re.compile('&quot;')
 
@@ -148,7 +159,7 @@ if __name__ == '__main__':
     linesProcessed = 0
     line = True
     while line:
-        if linesProcessed == lines_to_process:
+        if linesProcessed == args.num_lines[0]:
             break
         try:
             line = f.readline()
@@ -179,7 +190,7 @@ if __name__ == '__main__':
 
 
     print("Number of things (affordance distributions): " + str(len(all_affordances)))
-    print("The program took this long: " + str(finishTime - startTime))
+    print("The program took this long (seconds): " + str(finishTime - startTime))
     print("The program processed this many lines: " + str(linesProcessed))
     linesPerSecond = linesProcessed/(finishTime - startTime)
     print("Lines Processed per second is: " + str(linesPerSecond))
