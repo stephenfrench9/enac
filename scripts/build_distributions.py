@@ -6,8 +6,6 @@ from spacy.lemmatizer import Lemmatizer
 from spacy.lang.en import LEMMA_INDEX, LEMMA_EXC, LEMMA_RULES
 import argparse
 
-
-# print(parser.Wikidump_Address)
 #global objects
 sp = spacy.load('en_core_web_sm')
 lemmatizer = Lemmatizer(LEMMA_INDEX, LEMMA_EXC, LEMMA_RULES)
@@ -18,19 +16,21 @@ all_affordances = {}
 # modifies "all_affordances"
 #input: A string from which affordances will be extracted.
 def process_paragraph(txt: str) -> None:
-    parse = sp(txt)
+    try:
+        parse = sp(txt)
+        for token in parse:
 
-    for token in parse:
+            if (token.dep_ == 'dobj' and token.pos_ == 'NOUN' and token.head.pos_ == 'VERB'):
+                # print('An affordance was added to the dictionary for a sentence structure w/dobj')
+                # print(str(token) + ":" + str(token.head))
+                addAffordance(str(token), str(token.head))
 
-        if (token.dep_ == 'dobj' and token.pos_ == 'NOUN' and token.head.pos_ == 'VERB'):
-            # print('An affordance was added to the dictionary for a sentence structure w/dobj')
-            # print(str(token) + ":" + str(token.head))
-            addAffordance(str(token), str(token.head))
-
-        if (token.dep_ == 'nsubjpass' and token.pos_ == 'NOUN' and token.head.pos_ == 'VERB'):
-            # print('An affordance was added to the dictionary for a passive sentence structure')
-            # print(str(token) + ":" + str(token.head))
-            addAffordance(str(token), str(token.head))
+            if (token.dep_ == 'nsubjpass' and token.pos_ == 'NOUN' and token.head.pos_ == 'VERB'):
+                # print('An affordance was added to the dictionary for a passive sentence structure')
+                # print(str(token) + ":" + str(token.head))
+                addAffordance(str(token), str(token.head))
+    except MemoryError:
+        print("There was a memory error while we tried to parse a sentence. Just skipped the one sentence.")
 
 # modifies "all_affordances"
 # input: An affordance pair
@@ -153,6 +153,7 @@ if __name__ == '__main__':
 
     f = open(args.Wikidump_Address[0])
     startTime = time.time()
+    prevTime = startTime
     reg = re.compile('&quot;')
 
     # READ and Analyze.
@@ -161,11 +162,9 @@ if __name__ == '__main__':
     while line:
         if linesProcessed == args.num_lines[0]:
             break
+
         try:
             line = f.readline()
-            # if linesProcessed < 0:
-            #     linesProcessed += 1
-            #     continue
             if cleanable(line):
                 line = clean(line)
                 if keep(line):
@@ -178,6 +177,10 @@ if __name__ == '__main__':
             line = True
         linesProcessed += 1
 
+        if linesProcessed % 100000 == 0:
+            print(linesProcessed)
+            print(time.time() - prevTime)
+            prevTime = time.time()
 
     f.close()
     finishTime = time.time()
