@@ -67,6 +67,8 @@ with codecs.open(pathArticles, "w", ENCODING) as articlesFH, \
                 title = elem.text
             elif tname == 'text':
                 print("AN ARTICLE SHOULD APPEAR HERE")
+                print(str(type(elem.text)))
+                print(str(len(elem.text)))
                 print(elem.text)
                 print("end")
                 time.sleep(3)
