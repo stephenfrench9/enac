@@ -185,7 +185,9 @@ if __name__ == '__main__':
                         entire dump.')
     args = parser.parse_args()
 
-    f = open(args.Wikidump_Address[0])
+    # decode with a utf-8 scheme. Throws no UnicodeDecodeError. accents
+    # are printed correctly.
+    f = open(args.Wikidump_Address[0], encoding='utf-8')
     startTime = time.time()
     prevTime = startTime
     reg = re.compile('&quot;')
@@ -207,6 +209,7 @@ if __name__ == '__main__':
                         line = line[1:]
                     if(line[0] == ":"):
                         line = line[1:]
+                    print(line)
                     process_paragraph(line)
         except UnicodeDecodeError:  # occurs more often in python 3
             line = True
