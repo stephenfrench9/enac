@@ -10,6 +10,7 @@ import pickle
 from spacy.lemmatizer import Lemmatizer
 from spacy.lang.en import LEMMA_INDEX, LEMMA_EXC, LEMMA_RULES
 import argparse
+from multiprocessing import Pool
 
 # global objects
 sp = spacy.load('en_core_web_sm')
@@ -44,6 +45,40 @@ def process_paragraph(txt: str, all_affordances: dict):
     except MemoryError:
         print("There was a memory error while we tried to parse a sentence. \
          Just skipped the one sentence.")
+
+
+def pool_process_paragraph(txt):
+    """Find all the affordances inside a line. Put those affordances in
+       a list. First add the "thing", and then add the "affordance"
+
+       positional arguments:
+       txt -- text from which affordances will be extracted
+    """
+
+    list_of_affs = []
+    try:
+        parse = sp(txt)
+        for token in parse:
+
+            if (token.dep_ == 'dobj' and token.pos_ == 'NOUN'
+               and token.head.pos_ == 'VERB'):
+                # print('An affordance was added to the dictionary for a
+                # sentence structure w/dobj')
+                # print(str(token) + ":" + str(token.head))
+                list_of_affs.append(str(token))
+                list_of_affs.append(str(token.head))
+
+            if (token.dep_ == 'nsubjpass' and token.pos_ == 'NOUN'
+               and token.head.pos_ == 'VERB'):
+                # print('An affordance was added to the dictionary for a
+                # passive sentence structure')
+                # print(str(token) + ":" + str(token.head))
+                list_of_affs.append(str(token))
+                list_of_affs.append(str(token.head))
+    except MemoryError:
+        print("There was a memory error while we tried to parse a sentence. \
+         Just skipped the one sentence.")
+    return list_of_affs
 
 
 def add_affordance(thing, affordance, all_affordances):
@@ -202,6 +237,9 @@ if __name__ == '__main__':
     # READ and Analyze.
     lines_processed = 0
     line = True
+    many_lines = []
+    my_pool = Pool()
+
     while line:
         if lines_processed == args.num_lines[0]:
             break
@@ -211,7 +249,31 @@ if __name__ == '__main__':
             if line and article_text(line):
                 line = clean(line)
                 if successfully_cleaned(line):
-                    process_paragraph(line, all_affordances)
+                    # process_paragraph(line, all_affordances)
+                    many_lines.append(line)
+                    if len(many_lines) == 2:
+                        # for indx, line in enumerate(many_lines):
+                        #     print(indx)
+                        #     print(line)
+
+
+                        affordances_from_lines = my_pool.map(pool_process_paragraph, many_lines)
+
+
+                        # print(affordances_from_lines)
+                        # for indx, affs in enumerate(affordances_from_lines):
+                        #     print(indx)
+                        #     print(affs)
+
+
+                        for affordances_from_line in affordances_from_lines:
+                            while len(affordances_from_line) > 0:
+                                an_affordance = affordances_from_line.pop()
+                                a_thing = affordances_from_line.pop()
+                                # print("thing: " + a_thing)
+                                # print("affordance: " + an_affordance)
+                                add_affordance(a_thing, an_affordance, all_affordances)
+                        many_lines = []
         except UnicodeDecodeError:  # occurs more often in python 3
             print("UNICODE DECODE ERROR")
             line = True
@@ -221,6 +283,11 @@ if __name__ == '__main__':
             print(lines_processed)
             print(time.time() - prev_time)
             prev_time = time.time()
+
+
+    my_pool.close()
+    my_pool.join()
+
 
     f.close()
     finishTime = time.time()
