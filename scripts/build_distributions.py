@@ -36,20 +36,20 @@ def process_paragraph(txt: str) -> None:
                 # print('An affordance was added to the dictionary for a
                 # sentence structure w/dobj')
                 # print(str(token) + ":" + str(token.head))
-                addAffordance(str(token), str(token.head))
+                add_affordance(str(token), str(token.head))
 
             if (token.dep_ == 'nsubjpass' and token.pos_ == 'NOUN'
                and token.head.pos_ == 'VERB'):
                 # print('An affordance was added to the dictionary for a
                 # passive sentence structure')
                 # print(str(token) + ":" + str(token.head))
-                addAffordance(str(token), str(token.head))
+                add_affordance(str(token), str(token.head))
     except MemoryError:
         print("There was a memory error while we tried to parse a sentence. \
          Just skipped the one sentence.")
 
 
-def addAffordance(thing, affordance):
+def add_affordance(thing, affordance):
     """ Add an affordance pair to the affordance dictionary
 
         positional arguments:
@@ -69,31 +69,31 @@ def addAffordance(thing, affordance):
         all_affordances[thing][affordance] = 1
 
 
-def optionsSub(thisString, options):
+def options_sub(this_string, options):
     """ Remove and replace text in a wikicode string
 
         positional arguments:
-        thisString -- wikicode string to be modified
+        this_string -- wikicode string to be modified
         options -- regex to locate parts of the string
         that look like [[...|...]]
 
         Return a modified string
     """
-    a = options.findall(thisString)
+    a = options.findall(this_string)
     for option in a:
         # print("The option is: " + option)
         secondThing = re.compile("\|.*?\]")
         m = secondThing.search(option)
         if m:
             # print("the second half of the option is: " + m.group(0)[1:-1])
-            thisString = thisString.replace(option, m.group(0)[1:-1])
+            this_string = this_string.replace(option, m.group(0)[1:-1])
         else:
             # print("We choose: " + option[2:-2])
-            thisString = thisString.replace(option, option[2:-2])
-    return thisString
+            this_string = this_string.replace(option, option[2:-2])
+    return this_string
 
 
-def clean(thisString):
+def clean(this_string):
     """Remove all wikimarkup text from a line
        from a wikidump.
 
@@ -101,7 +101,7 @@ def clean(thisString):
 
        positional arguments:
 
-       thisString -- line from a wikidump.
+       this_string -- line from a wikidump.
     """
     regex_and_replacements = {
 
@@ -129,13 +129,13 @@ def clean(thisString):
 
     for regex_template in regex_and_replacements.keys():
         regex = re.compile(regex_template)
-        thisString = regex.sub(regex_and_replacements[regex_template],
-                               thisString)
+        this_string = regex.sub(regex_and_replacements[regex_template],
+                               this_string)
 
     options = re.compile("\[\[.*?\]\]")
-    thisString = optionsSub(thisString, options)
+    this_string = options_sub(this_string, options)
 
-    return(thisString)
+    return(this_string)
 
 
 def successfully_cleaned(line):
@@ -183,7 +183,7 @@ def article_text(some_text_from_wikidump):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Read and parse a wiki dump')
-    parser.add_argument('Wikidump_Address', metavar='A', type=str, nargs=1,
+    parser.add_argument('wikidump_address', metavar='A', type=str, nargs=1,
                         help='The address for the dump file')
     parser.add_argument('--num_lines', metavar='N', type=int, nargs=1,
                         default=[-1], help='The number of lines to process \
@@ -194,16 +194,16 @@ if __name__ == '__main__':
 
     # decode with a utf-8 scheme. Throws no UnicodeDecodeError. accents
     # are printed correctly.
-    f = open(args.Wikidump_Address[0], encoding='utf-8')
-    startTime = time.time()
-    prevTime = startTime
+    f = open(args.wikidump_address[0], encoding='utf-8')
+    start_time = time.time()
+    prev_time = start_time
     reg = re.compile('&quot;')
 
     # READ and Analyze.
-    linesProcessed = 0
+    lines_processed = 0
     line = True
     while line:
-        if linesProcessed == args.num_lines[0]:
+        if lines_processed == args.num_lines[0]:
             break
 
         try:
@@ -213,14 +213,14 @@ if __name__ == '__main__':
                 if successfully_cleaned(line):
                     process_paragraph(line)
         except UnicodeDecodeError:  # occurs more often in python 3
-            print("WE HAVE A UNICODE DECODE ERROR")
+            print("UNICODE DECODE ERROR")
             line = True
 
-        linesProcessed += 1
-        if linesProcessed % 100000 == 0:
-            print(linesProcessed)
-            print(time.time() - prevTime)
-            prevTime = time.time()
+        lines_processed += 1
+        if lines_processed % 100000 == 0:
+            print(lines_processed)
+            print(time.time() - prev_time)
+            prev_time = time.time()
 
     f.close()
     finishTime = time.time()
@@ -228,11 +228,11 @@ if __name__ == '__main__':
     print("Number of things (affordance distributions): " +
           str(len(all_affordances)))
     print("The program took this long (seconds): " +
-          str(finishTime - startTime))
-    print("The program processed this many lines: " + str(linesProcessed))
-    linesPerSecond = linesProcessed/(finishTime - startTime)
-    print("Lines Processed per second is: " + str(linesPerSecond))
-    print("Number of lines processed: " + str(linesProcessed))
+          str(finishTime - start_time))
+    print("The program processed this many lines: " + str(lines_processed))
+    lines_per_second = lines_processed/(finishTime - start_time)
+    print("Lines Processed per second is: " + str(lines_per_second))
+    print("Number of lines processed: " + str(lines_processed))
 
     with open('..\\..\\all_affordances.p', 'wb') as g:
         pickle.dump(all_affordances, g)
