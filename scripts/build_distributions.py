@@ -15,11 +15,8 @@ import argparse
 sp = spacy.load('en_core_web_sm')
 lemmatizer = Lemmatizer(LEMMA_INDEX, LEMMA_EXC, LEMMA_RULES)
 
-# dictionary to hold all of the affordances
-all_affordances = {}
 
-
-def process_paragraph(txt: str) -> None:
+def process_paragraph(txt: str, all_affordances: dict):
     """ parse a sentence and add all the affordances found
         in that sentence to a dictionary.
 
@@ -36,25 +33,26 @@ def process_paragraph(txt: str) -> None:
                 # print('An affordance was added to the dictionary for a
                 # sentence structure w/dobj')
                 # print(str(token) + ":" + str(token.head))
-                add_affordance(str(token), str(token.head))
+                add_affordance(str(token), str(token.head), all_affordances)
 
             if (token.dep_ == 'nsubjpass' and token.pos_ == 'NOUN'
                and token.head.pos_ == 'VERB'):
                 # print('An affordance was added to the dictionary for a
                 # passive sentence structure')
                 # print(str(token) + ":" + str(token.head))
-                add_affordance(str(token), str(token.head))
+                add_affordance(str(token), str(token.head), all_affordances)
     except MemoryError:
         print("There was a memory error while we tried to parse a sentence. \
          Just skipped the one sentence.")
 
 
-def add_affordance(thing, affordance):
+def add_affordance(thing, affordance, all_affordances):
     """ Add an affordance pair to the affordance dictionary
 
         positional arguments:
         thing -- the object in the affordance pair.
         affordance -- the affordance provided by the object.
+        all_affordances -- the dictionary with all the affordances
     """
 
     lemmas = lemmatizer(affordance, 'VERB')
@@ -192,12 +190,14 @@ if __name__ == '__main__':
                         entire dump.')
     args = parser.parse_args()
 
+    # dictionary to hold all of the affordances
+    all_affordances = {}
+
     # decode with a utf-8 scheme. Throws no UnicodeDecodeError. accents
     # are printed correctly.
     f = open(args.wikidump_address[0], encoding='utf-8')
     start_time = time.time()
     prev_time = start_time
-    reg = re.compile('&quot;')
 
     # READ and Analyze.
     lines_processed = 0
@@ -211,7 +211,7 @@ if __name__ == '__main__':
             if line and article_text(line):
                 line = clean(line)
                 if successfully_cleaned(line):
-                    process_paragraph(line)
+                    process_paragraph(line, all_affordances)
         except UnicodeDecodeError:  # occurs more often in python 3
             print("UNICODE DECODE ERROR")
             line = True
