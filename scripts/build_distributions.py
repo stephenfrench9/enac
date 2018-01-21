@@ -136,7 +136,7 @@ def clean(this_string):
     return(this_string)
 
 
-def successfully_cleaned(line):
+def is_clean(line):
     """ Decide if the line has been successfully cleaned.
 
         Return false if the line is not clean.
@@ -152,7 +152,7 @@ def successfully_cleaned(line):
     return cleaned
 
 
-def article_text(some_text_from_wikidump):
+def is_article_text(some_text_from_wikidump):
     """ Analyze a line from a wikidump file and decide if it
         is text from the article body.
 
@@ -208,9 +208,9 @@ if __name__ == '__main__':
 
         try:
             line = f.readline()
-            if line and article_text(line):
+            if line and is_article_text(line):
                 line = clean(line)
-                if successfully_cleaned(line):
+                if is_clean(line):
                     process_paragraph(line, all_affordances)
         except UnicodeDecodeError:  # occurs more often in python 3
             print("UNICODE DECODE ERROR")
