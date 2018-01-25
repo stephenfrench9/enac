@@ -31,7 +31,7 @@ start = time.time()
 # f = open("E:\\enwiki-latest-pages-articles.xml", encoding='latin_1') # appears to never fail
 f = open("E:\\enwiki-latest-pages-articles.xml", encoding='utf-8') # (never threw an UnicodeDecodeError, on the whole document)
 
-# It looks like the function open() fails before the function codec.open(), even when they are using the same encoding. 
+# It looks like the function open() fails before the function codec.open(), even when they are using the same encoding.
 
 
 line = True
