@@ -42,31 +42,37 @@ def process_paragraph(txt: str, all_affordances: dict):
          Just skipped the one sentence.")
 
 
-def pool_process_paragraph(q,t1,label,start_line,num_lines):
+def print_log(label,mssg,lock):
+    lock.acquire()
+    print(label + mssg)
+    lock.release()
+
+
+def pool_process_paragraph(q,t1,label,start_line,num_lines,lock):
     """Find all the affordances inside a line. Put those affordances in
        a list. First add the "thing", and then add the "affordance"
 
        positional arguments:
        txt -- text from which affordances will be extracted
     """
-    print(label + " ..... Execute the first line at " + str(round(time.time()-t1,4)))
+    print_log(label, " ..... Execute the first line at " + str(round(time.time()-t1,4)), lock)
     f = open("..\\..\\lines_to_process.txt", 'r',encoding='utf-8')
 
     for i in range(0,start_line):
         line = f.readline()
 
-    print(label + " ...... skipped many lines")
-    print(label + " ...... about to start reading and parsing lins")
+    print_log(label, " ...... skipped many lines", lock)
+    print_log(label, " ...... about to start reading and parsing lins", lock)
     for _ in range(0,num_lines):
         line = f.readline()
         if len(line) > 1:
-            print(label + line)
+            # print(label + line)
 
             try:
                 # print("BEFORE: " + str(time.time()))
                 # print(line)
                 parse = sp(line)
-                # print(label + " ...... parse a sentence")
+                print_log(label, " ...... parsed a sentence", lock)
                 # print("AFTER: " +str(time.time()))
                 for token in parse:
 
@@ -77,10 +83,10 @@ def pool_process_paragraph(q,t1,label,start_line,num_lines):
                         # print(str(token) + ":" + str(token.head))
                         # lock.acquire()
                         toopull = (str(token),str(token.head))
-                        # print(label + " ...... about to place a tuple.")
-                        print(toopull)
+                        print_log(label, " ...... about to place a tuple.", lock)
+                        # print(toopull)
                         q.put(toopull)
-                        # print(label + "....... just placed a tuple.")
+                        print_log(label, "....... just placed a tuple.", lock)
                         # lock.release()
                     # if (token.dep_ == 'nsubjpass' and token.pos_ == 'NOUN'
                     #    and token.head.pos_ == 'VERB'):
@@ -99,7 +105,7 @@ def pool_process_paragraph(q,t1,label,start_line,num_lines):
         # elif len(line) == 0:
         #     # print(label + "ZEROLINE")
     q.put("END111END222end3755639")
-    print(label + " ..... pool_process_paragraph is done at " + str(round(time.time()-t1,4)))
+    print_log(label, " ..... pool_process_paragraph is done at " + str(round(time.time()-t1,4)), lock)
 
 
 def add_affordance(thing, affordance, all_affordances):
@@ -152,85 +158,66 @@ if __name__=='__main__':
         the_man.Queue()
     ]
 
+    lock = Lock()
+
     process = [
         Process(target = pool_process_paragraph, args =
-                (process_queues[0],t1,process_labels[0],0,30,)),
+                (process_queues[0],t1,process_labels[0],0,50,lock,)),
         Process(target = pool_process_paragraph, args =
-                (process_queues[1],t1,process_labels[1],100,100,)),
+                (process_queues[1],t1,process_labels[1],50,50,lock,)),
         Process(target = pool_process_paragraph, args =
-                (process_queues[2],t1,process_labels[2],0,200,))
+                (process_queues[2],t1,process_labels[2],0,100,lock))
     ]
 
     print(process_labels[0] + "created at time " + str(round(time.time()-t1,4)))
-    # print(process_labels[1] + "created at time " + str(round(time.time()-t1,4)))
-    # print(process_labels[2] + "created at time " + str(round(time.time()-t1,4)))
+    print(process_labels[1] + "created at time " + str(round(time.time()-t1,4)))
+    print(process_labels[2] + "created at time " + str(round(time.time()-t1,4)))
 
 
 
 
     process[0].start()
     print(process_labels[0] + "started at time " + str(round(time.time()-t1,4)))
-    # process[1].start()
-    # print(process_labels[1] + "started at time " + str(round(time.time()-t1,4)))
-    # process[2].start()
-    # print(process_labels[2] + "started at time " + str(round(time.time()-t1,4)))
-
+    process[1].start()
+    print(process_labels[1] + "started at time " + str(round(time.time()-t1,4)))
+    process[2].start()
+    print(process_labels[2] + "started at time " + str(round(time.time()-t1,4)))
+    time.sleep(10)
     # Read into your process from another process.
+
+    target_dict = [all_affordances, all_affordances, check_affordances]
     num_done = 0
     while True:
 
-        proc_num = 0
-        try:
-            # print(process_labels[proc_num] + "about to read from the queue.")
-            aff_tuple = process_queues[proc_num].get(True, timeout = 1) # procure an affordance tuple
-            # print(process_labels[proc_num] + "got a tuple")
-            if aff_tuple == "END111END222end3755639":
-                num_done += 1
-            else:
-                add_affordance(aff_tuple[0],aff_tuple[1],all_affordances)
-        except queue.Empty:
-            print(process_labels[proc_num] + "no tuples found.")
+        for proc_num in range(0,3):
+            try:
+                print_log(process_labels[proc_num], "about to read from the queue.", lock)
+                aff_tuple = process_queues[proc_num].get(True, timeout = .001) # procure an affordance tuple
+                print_log(process_labels[proc_num], "got a tuple", lock)
+                print_log(process_labels[proc_num], str(aff_tuple), lock)
+                if aff_tuple == "END111END222end3755639":
+                    num_done += 1
+                else:
+                    add_affordance(aff_tuple[0],aff_tuple[1], target_dict[proc_num])
+            except queue.Empty:
+                print_log(process_labels[proc_num], "no tuples found.", lock)
 
-        # proc_num = 1
-        # try:
-        #     print(process_labels[proc_num] + "about to read from the queue.")
-        #     aff_tuple = process_queues[proc_num].get(True, timeout = 1) # procure an affordance tuple
-        #     print("")
-        #     if aff_tuple == "END111END222end3755639":
-        #         num_done += 1
-        #     else:
-        #         add_affordance(aff_tuple[0],aff_tuple[1],all_affordances)
-        # except queue.Empty:
-        #     print(process_labels[proc_num] + "no tuples found.")
-        #
-        # proc_num = 2
-        # try:
-        #     print(process_labels[proc_num] + "about to read from the queue.")
-        #     aff_tuple = process_queues[proc_num].get(True, timeout = 1) # procure an affordance tuple
-        #     print("got a tupel")
-        #     if aff_tuple == "END111END222end3755639":
-        #         num_done += 1
-        #     else:
-        #         add_affordance(aff_tuple[0],aff_tuple[1],all_affordances)
-        # except queue.Empty:
-        #     print(process_labels[proc_num] + "no tuples found.")
-
-        if num_done == 1:
+        if num_done == 3:
             break
 
 
-
-    # process[proc_num].join()
-    # print(process_labels[proc_num] + "joined at time " + str(round(time.time()-t1,4)))
+    proc_num = 0
+    process[proc_num].join()
+    print(process_labels[proc_num] + "joined at time " + str(round(time.time()-t1,4)))
     # read_q_into_affordances(process_queues[proc_num],all_affordances)
 
     proc_num = 1
-    # process[proc_num].join()
-    # print(process_labels[proc_num] + "joined at time " + str(round(time.time()-t1,4)))
+    process[proc_num].join()
+    print(process_labels[proc_num] + "joined at time " + str(round(time.time()-t1,4)))
     # read_q_into_affordances(process_queues[proc_num],all_affordances)
 
     proc_num = 2
-    # print(process_labels[proc_num] + "joined at time " + str(round(time.time()-t1,4)))
+    print(process_labels[proc_num] + "joined at time " + str(round(time.time()-t1,4)))
     # read_q_into_affordances(process_queues[proc_num],check_affordances)
     # process[proc_num].join()
 
