@@ -56,7 +56,7 @@ def pool_process_paragraph(q,t1,label,start_line,num_lines,lock):
        txt -- text from which affordances will be extracted
     """
     print_log(label, " ..... Execute the first line at " + str(round(time.time()-t1,4)), lock)
-    f = open("..\\..\\lines_to_process.txt", 'r',encoding='utf-8')
+    f = open("..\\..\\intermediate_text.txt", 'r',encoding='utf-8')
 
     for i in range(0,start_line):
         line = f.readline()
