@@ -48,7 +48,7 @@ def print_log(label,mssg,lock):
     lock.release()
 
 
-def pool_process_paragraph(q,t1,label,file_location,lock,group_size,process_num):
+def pool_process_paragraph(q,t1,label,file_location,total_groups,lock,group_size,process_num):
     """Find all the affordances inside a line. Put those affordances in
        a list. First add the "thing", and then add the "affordance"
 
@@ -60,12 +60,13 @@ def pool_process_paragraph(q,t1,label,file_location,lock,group_size,process_num)
 
 
     print_log(label, " ...... about to start reading and parsing lins", lock)
+    print_log(label, " ...... the total number of groups is: " + str(total_groups), lock)
     line = f.readline()
     group_num = 0
     line_num = 0
     while line:
 
-        if group_num == 5:
+        if group_num == total_groups:
             break
         if line_num == process_num:
             try:
@@ -185,6 +186,9 @@ if __name__=='__main__':
 
     total_lines = args.num_lines[0]
     num_processes = args.num_processes[0]
+    group_size = num_processes
+    total_lines = args.num_lines[0]
+    total_groups = total_lines//group_size
     #
     # process = []
     #
@@ -195,11 +199,11 @@ if __name__=='__main__':
     #     first thing to do is delete this unused process list below. it is deprecated. replaced!
     process = [
         Process(target = pool_process_paragraph, args =
-                (process_queues[0],t1,process_labels[0], args.intermediate_text_address[0], lock, num_processes, 0,)),
+                (process_queues[0],t1,process_labels[0], args.intermediate_text_address[0], total_groups, lock, num_processes, 0,)),
         Process(target = pool_process_paragraph, args =
-                (process_queues[1],t1,process_labels[1], args.intermediate_text_address[0], lock, num_processes, 1,)),
+                (process_queues[1],t1,process_labels[1], args.intermediate_text_address[0], total_groups, lock, num_processes, 1,)),
         Process(target = pool_process_paragraph, args =
-                (process_queues[2],t1,process_labels[2], args.intermediate_text_address[0], lock, num_processes, 2,))
+                (process_queues[2],t1,process_labels[2], args.intermediate_text_address[0], total_groups, lock, num_processes, 2,))
     ]
 
     print(process_labels[0] + "created at time " + str(round(time.time()-t1,4)))
