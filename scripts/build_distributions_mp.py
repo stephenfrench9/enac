@@ -48,7 +48,7 @@ def print_log(label,mssg,lock):
     lock.release()
 
 
-def pool_process_paragraph(q,t1,label,start_line,num_lines,lock):
+def pool_process_paragraph(q,t1,label,lock,group_size,process_num):
     """Find all the affordances inside a line. Put those affordances in
        a list. First add the "thing", and then add the "affordance"
 
@@ -58,52 +58,49 @@ def pool_process_paragraph(q,t1,label,start_line,num_lines,lock):
     print_log(label, " ..... Execute the first line at " + str(round(time.time()-t1,4)), lock)
     f = open("..\\..\\intermediate_text.txt", 'r',encoding='utf-8')
 
-    for i in range(0,start_line):
-        line = f.readline()
 
-    print_log(label, " ...... skipped many lines", lock)
     print_log(label, " ...... about to start reading and parsing lins", lock)
-    for _ in range(0,num_lines):
-        line = f.readline()
-        if len(line) > 1:
-            # print(label + line)
+    line = f.readline()
+    group_num = 0
+    line_num = 0
+    while line:
 
+        if group_num == 5:
+            break
+        if line_num == process_num:
             try:
-                # print("BEFORE: " + str(time.time()))
-                # print(line)
                 parse = sp(line)
                 print_log(label, " ...... parsed a sentence", lock)
-                # print("AFTER: " +str(time.time()))
+                print_log(label, " ...... line_num is: " + str(line_num),lock)
+                print_log(label, " ...... group_num is: " + str(group_num),lock)
+                print_log(label, line, lock)
+                # print_log(label, " ...... line_num is: " + str(line_num), lock)
+                # print_log(label, " ...... group_num is: " + str(group_num), lock)
                 for token in parse:
 
                     if (token.dep_ == 'dobj' and token.pos_ == 'NOUN'
                        and token.head.pos_ == 'VERB'):
-                        # print('An affordance was added to the dictionary for a
-                        # sentence structure w/dobj')
-                        # print(str(token) + ":" + str(token.head))
-                        # lock.acquire()
                         toopull = (str(token),str(token.head))
-                        print_log(label, " ...... about to place a tuple.", lock)
-                        # print(toopull)
+                        # print_log(label, " ...... about to place a tuple.", lock)
                         q.put(toopull)
-                        print_log(label, "....... just placed a tuple.", lock)
-                        # lock.release()
+                        # print_log(label, "....... just placed a tuple.", lock)
                     # if (token.dep_ == 'nsubjpass' and token.pos_ == 'NOUN'
                     #    and token.head.pos_ == 'VERB'):
-                    #     # print('An affordance was added to the dictionary for a
-                    #     # passive sentence structure')
-                    #     # print(str(token) + ":" + str(token.head))
-                    #     # lock.acquire()
                     #     toopull = (token,token.head)
                     #     q.put(toopull)
-                    #     # lock.release()
             except MemoryError:
                 print("There was a memory error while we tried to parse a sentence. \
                  Just skipped the one sentence.")
-        # elif len(line) == 1:
-        #     # print(label + "DEADLINE")
-        # elif len(line) == 0:
-        #     # print(label + "ZEROLINE")
+
+        if line_num == (group_size - 1):
+            group_num += 1
+            line_num = 0
+            line = f.readline()
+        else:
+            line_num += 1
+            line = f.readline()
+
+
     q.put("END111END222end3755639")
     print_log(label, " ..... pool_process_paragraph is done at " + str(round(time.time()-t1,4)), lock)
 
@@ -160,13 +157,23 @@ if __name__=='__main__':
 
     lock = Lock()
 
+    # total_lines = 1000
+    num_processes = 3
+    #
+    # process = []
+    #
+    # for i in range(0,num_processes):
+    #     process.append(Process(target = pool_process_paragraph, args =
+    #                    (process_queues[i],t1,process_labels[i],
+    #                     i*lines_per_process,lines_per_process,lock,)))
+    #     first thing to do is delete this unused process list below. it is deprecated. replaced!
     process = [
         Process(target = pool_process_paragraph, args =
-                (process_queues[0],t1,process_labels[0],0,50,lock,)),
+                (process_queues[0],t1,process_labels[0],lock, num_processes, 0,)),
         Process(target = pool_process_paragraph, args =
-                (process_queues[1],t1,process_labels[1],50,50,lock,)),
+                (process_queues[1],t1,process_labels[1],lock, num_processes, 1,)),
         Process(target = pool_process_paragraph, args =
-                (process_queues[2],t1,process_labels[2],0,100,lock))
+                (process_queues[2],t1,process_labels[2],lock, num_processes, 2,))
     ]
 
     print(process_labels[0] + "created at time " + str(round(time.time()-t1,4)))
@@ -178,29 +185,34 @@ if __name__=='__main__':
 
     process[0].start()
     print(process_labels[0] + "started at time " + str(round(time.time()-t1,4)))
+    time.sleep(.5)
+
     process[1].start()
     print(process_labels[1] + "started at time " + str(round(time.time()-t1,4)))
+    time.sleep(.5)
+
     process[2].start()
     print(process_labels[2] + "started at time " + str(round(time.time()-t1,4)))
-    time.sleep(10)
+    time.sleep(6)
     # Read into your process from another process.
 
-    target_dict = [all_affordances, all_affordances, check_affordances]
+    target_dict = [all_affordances, all_affordances, all_affordances]
     num_done = 0
     while True:
-
         for proc_num in range(0,3):
             try:
-                print_log(process_labels[proc_num], "about to read from the queue.", lock)
-                aff_tuple = process_queues[proc_num].get(True, timeout = .001) # procure an affordance tuple
+                # print_log(process_labels[proc_num], "about to read from the queue.", lock)
+                aff_tuple = process_queues[proc_num].get(True, timeout = 1) # procure an affordance tuple
                 print_log(process_labels[proc_num], "got a tuple", lock)
                 print_log(process_labels[proc_num], str(aff_tuple), lock)
                 if aff_tuple == "END111END222end3755639":
                     num_done += 1
+                    print(num_done)
                 else:
                     add_affordance(aff_tuple[0],aff_tuple[1], target_dict[proc_num])
             except queue.Empty:
-                print_log(process_labels[proc_num], "no tuples found.", lock)
+                a = 1
+                # print_log(process_labels[proc_num], "no tuples found.", lock)
 
         if num_done == 3:
             break
