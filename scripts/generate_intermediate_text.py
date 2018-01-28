@@ -183,11 +183,17 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate a purely text document from the wikidump xml')
     parser.add_argument('wikidump_address', metavar='A', type=str, nargs=1,
                         help='The address for the dump file')
+    parser.add_argument('intermediate_text_address', metavar = 'I', type=str,
+                        nargs=1, help='The address in which to place the \
+                        intermediate_text. For Example: C:\\Users\\Stephen \
+                        \\documents\\intermediate_text.txt')
     parser.add_argument('--num_lines', metavar='N', type=int, nargs=1,
                         default=[-1], help='The number of lines to process \
                         from the wikidump. A value of -1 means the entire \
                         dump will be processed. The default is to process the \
-                        entire dump.')
+                        entire dump. Note: num_lines is the number of lines \
+                        in the xml document to analyze, many of them will be \
+                        thrown out')
     args = parser.parse_args()
 
     # dictionary to hold all of the affordances
@@ -196,7 +202,7 @@ if __name__ == '__main__':
     # decode with a utf-8 scheme. Throws no UnicodeDecodeError. accents
     # are printed correctly.
     f = open(args.wikidump_address[0], encoding='utf-8')
-    g = open("..\\..\\intermediate_text.txt', 'w', encoding='utf-8')
+    g = open(args.intermediate_text_address[0], 'w', encoding='utf-8')
     start_time = time.time()
     prev_time = start_time
 
@@ -214,19 +220,19 @@ if __name__ == '__main__':
                 line = clean(line)
                 if is_clean(line):
                     lines_kept += 1
-                    print("We are keeping a line of lenth: " + str(len(line)))
-                    print(line)
+                    # print("We are keeping a line of lenth: " + str(len(line)))
+                    # print(line)
                     g.writelines(line)
                     # process_paragraph(line, all_affordances)
         except UnicodeDecodeError:  # occurs more often in python 3
             print("UNICODE DECODE ERROR")
             line = True
 
-        if lines_kept == 1000:
-            break
+        # if lines_kept == 1000:
+        #     break
 
         lines_processed += 1
-        if lines_processed % 100000 == 0:
+        if lines_processed % 10000 == 0:
             print(lines_processed)
             print(time.time() - prev_time)
             prev_time = time.time()
@@ -242,10 +248,8 @@ if __name__ == '__main__':
     print("The program processed this many lines: " + str(lines_processed))
     lines_per_second = lines_processed/(finishTime - start_time)
     print("Lines Processed per second is: " + str(lines_per_second))
-    print("Number of lines processed: " + str(lines_processed))
+    print("Number of lines kept: " + str(lines_kept))
 
-    with open('..\\..\\all_affordances.p', 'wb') as g:
-        pickle.dump(all_affordances, g)
 
 # Note: You are handling references incorrectly. Some of them get split across
 # lines. It'd take probably an hour to fix it. You currently get rid of lines
