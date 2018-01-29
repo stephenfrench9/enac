@@ -12,6 +12,7 @@ import multiprocessing
 sp = spacy.load('en_core_web_sm')
 lemmatizer = Lemmatizer(LEMMA_INDEX, LEMMA_EXC, LEMMA_RULES)
 
+
 def process_paragraph(txt: str, all_affordances: dict):
     """ parse a sentence and add all the affordances found
         in that sentence to a dictionary.
@@ -42,25 +43,29 @@ def process_paragraph(txt: str, all_affordances: dict):
          Just skipped the one sentence.")
 
 
-def print_log(label,mssg,lock):
+def print_log(label, mssg, lock):
     lock.acquire()
     print(label + mssg)
     lock.release()
 
 
-def pool_process_paragraph(q,t1,label,file_location,total_groups,lock,group_size,process_num):
+def pool_process_paragraph(q, t1, label, file_location, total_groups, pipe_end,
+                           lock, group_size, process_num):
     """Find all the affordances inside a line. Put those affordances in
        a list. First add the "thing", and then add the "affordance"
 
        positional arguments:
        txt -- text from which affordances will be extracted
     """
-    # print_log(label, " ..... Execute the first line at " + str(round(time.time()-t1,4)), lock)
-    f = open(file_location, 'r',encoding='utf-8')
+    print_log(label, " ..... Execute the first line at "
+              + str(round(time.time()-t1, 4)), lock)
+    f = open(file_location, 'r', encoding='utf-8')
 
+    pipe_end.send(label + "process begins")
 
-    # # print_log(label, " ...... about to start reading and parsing lins", lock)
-    # print_log(label, " ...... the total number of groups is: " + str(total_groups), lock)
+    print_log(label, " ...... about to start reading and parsing lins", lock)
+    print_log(label, " ...... the total number of groups is: "
+              + str(total_groups), lock)
     line = f.readline()
     group_num = 0
     line_num = 0
@@ -72,26 +77,28 @@ def pool_process_paragraph(q,t1,label,file_location,total_groups,lock,group_size
             try:
                 parse = sp(line)
                 # print_log(label, " ...... parsed a sentence", lock)
-                # print_log(label, " ...... line_num is: " + str(line_num),lock)
-                # print_log(label, " ...... group_num is: " + str(group_num),lock)
+                # print_log(label, " ...... line_num is: "
+                #           + str(line_num), lock)
+                # print_log(label, " ...... group_num is: "
+                #           + str(group_num), lock)
                 # print_log(label, line, lock)
-                # # print_log(label, " ...... line_num is: " + str(line_num), lock)
-                # # print_log(label, " ...... group_num is: " + str(group_num), lock)
                 for token in parse:
 
                     if (token.dep_ == 'dobj' and token.pos_ == 'NOUN'
                        and token.head.pos_ == 'VERB'):
-                        toopull = (str(token),str(token.head))
-                        # # print_log(label, " ...... about to place a tuple.", lock)
+                        toopull = (str(token), str(token.head))
+                        # print_log(label, " ...... about to place a tuple.",
+                        #           lock)
                         q.put(toopull)
-                        # # print_log(label, "....... just placed a tuple.", lock)
+                        # print_log(label, "....... just placed a tuple: "
+                        #           + str(toopull), lock)
                     # if (token.dep_ == 'nsubjpass' and token.pos_ == 'NOUN'
                     #    and token.head.pos_ == 'VERB'):
                     #     toopull = (token,token.head)
                     #     q.put(toopull)
             except MemoryError:
-                print("There was a memory error while we tried to parse a sentence. \
-                 Just skipped the one sentence.")
+                print("There was a memory error while we tried to \
+                      parse a sentence. Just skipped the one sentence.")
 
         if line_num == (group_size - 1):
             group_num += 1
@@ -101,10 +108,10 @@ def pool_process_paragraph(q,t1,label,file_location,total_groups,lock,group_size
             line_num += 1
             line = f.readline()
 
-
     q.put("END111END222end3755639")
     q.put(group_num)
-    # print_log(label, " ..... pool_process_paragraph is done at " + str(round(time.time()-t1,4)), lock)
+    print_log(label, " ..... pool_process_paragraph is done at "
+              + str(round(time.time()-t1, 4)), lock)
 
 
 def add_affordance(thing, affordance, all_affordances):
@@ -128,7 +135,7 @@ def add_affordance(thing, affordance, all_affordances):
         all_affordances[thing][affordance] = 1
 
 
-def read_q_into_affordances(q,all_affordances):
+def read_q_into_affordances(q, all_affordances):
     while not q.empty():
         a_thing = q.get()
         an_affordance = q.get()
@@ -138,13 +145,13 @@ def read_q_into_affordances(q,all_affordances):
         add_affordance(a_thing, an_affordance, all_affordances)
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Read and parse txt doc \
                                      generated by generate_intermediate_text.\
-                                     py. Identify affordances with in the text \
-                                     and read them into a dictionary. Print \
-                                     that dictionary.\
+                                     py. Identify affordances with in the \
+                                     text and read them into a dictionary. \
+                                     Print that dictionary.\
                                      ')
     parser.add_argument('intermediate_text_address', metavar='A', type=str,
                         nargs=1, help='The address for the file with text to \
@@ -157,16 +164,19 @@ if __name__=='__main__':
     parser.add_argument('--num_lines', metavar='N', type=int, nargs=1,
                         default=[-1], help='The number of lines to process \
                         from the intermediate_text. A value of -1 means the \
-                        entire dump will be processed. The default is to \
-                        process the entire dump.')
+                        entire intermediate_text will be processed. The \
+                        default is to process the entire intermediate_text.')
     parser.add_argument('--num_processes', metavar='P', type=int, nargs=1,
                         default=[1], help='The number of process objects the\
                         script will use.')
     args = parser.parse_args()
 
-    # print("intermediate_text_address argument has the value: " + args.intermediate_text_address[0])
-    # print("--num_lines argument has the value: " + str(args.num_lines[0]))
-    # print("--num_processes argument has the value: " + str(args.num_processes[0]))
+    print("intermediate_text_address argument has the value: "
+          + args.intermediate_text_address[0])
+    print("--num_lines argument has the value: "
+          + str(args.num_lines[0]))
+    print("--num_processes argument has the value: "
+          + str(args.num_processes[0]))
 
     all_affordances = {}
     check_affordances = {}
@@ -182,61 +192,53 @@ if __name__=='__main__':
     process_labels = []
     process_queues = []
     process = []
+    pipes = []
 
-    for i in range(0,num_processes):
+    for i in range(0, num_processes):
         label = "process_  " + str(i) + "  : "
         process_labels.append(label)
         process_queues.append(the_man.Queue())
-        process.append(Process(target = pool_process_paragraph, args =
-                                (
-                                process_queues[i],
-                                t1,
-                                process_labels[i],
-                                args.intermediate_text_address[0],
-                                total_groups,
-                                lock,
-                                num_processes,
-                                i,
+        send_end, recv_end = Pipe()
+        pipes.append(recv_end)
+        process.append(Process(target=pool_process_paragraph, args=(
+                                    process_queues[i],
+                                    t1,
+                                    process_labels[i],
+                                    args.intermediate_text_address[0],
+                                    total_groups,
+                                    send_end,
+                                    lock,
+                                    num_processes,
+                                    i,
                                 )
                                )
-                      )
+                       )
 
-        # print(process_labels[i] + "created at time " + str(round(time.time()-t1,4)))
+        print(process_labels[i] + "created at time "
+              + str(round(time.time()-t1, 4)))
 
-    # process = [
-    #     Process(target = pool_process_paragraph, args =
-    #             (process_queues[0],t1,process_labels[0], args.intermediate_text_address[0], total_groups, lock, num_processes, 0,)),
-    #     Process(target = pool_process_paragraph, args =
-    #             (process_queues[1],t1,process_labels[1], args.intermediate_text_address[0], total_groups, lock, num_processes, 1,)),
-    #     Process(target = pool_process_paragraph, args =
-    #             (process_queues[2],t1,process_labels[2], args.intermediate_text_address[0], total_groups, lock, num_processes, 2,))
-    # ]
-
-    # print(process_labels[1] + "created at time " + str(round(time.time()-t1,4)))
-    # print(process_labels[2] + "created at time " + str(round(time.time()-t1,4)))
-
-
-    for i in range(0,num_processes):
+    for i in range(0, num_processes):
         process[i].start()
-        # print(process_labels[i] + "started at time " + str(round(time.time()-t1,4)))
-        # time.sleep(.5)
+        print(process_labels[i] + "started at time "
+              + str(round(time.time()-t1, 4)))
+        time.sleep(.5)
 
+    label = "process_ all : "
+    print_log(label, "waiting for the processes to start", lock)
+    for i in range(0, len(process)):
+        message_1 = pipes[i].recv()
+        print_log(process_labels[i], "message recieved by main: " + message_1,
+                  lock)
 
-        # process[1].start()
-        # print(process_labels[1] + "started at time " + str(round(time.time()-t1,4)))
-        # time.sleep(.5)
-        #
-        # process[2].start()
-        # print(process_labels[2] + "started at time " + str(round(time.time()-t1,4)))
-
-    # time.sleep(6)
-
+    label = "process_ all : "
+    print_log(label, "All processes started, begin scanning queues.", lock)
     num_done = 0
     while True:
-        for proc_num in range(0,num_processes):
+        for proc_num in range(0, num_processes):
             try:
-                # # print_log(process_labels[proc_num], "about to read from the queue.", lock)
-                aff_tuple = process_queues[proc_num].get(True, timeout = .001) # procure an affordance tuple
+                # print_log(process_labels[proc_num],
+                #           "about to read from the queue.", lock)
+                aff_tuple = process_queues[proc_num].get(True, timeout=.001)
                 # print_log(process_labels[proc_num], "got a tuple", lock)
                 # print_log(process_labels[proc_num], str(aff_tuple), lock)
                 if aff_tuple == "END111END222end3755639":
@@ -247,38 +249,18 @@ if __name__=='__main__':
                     add_affordance(aff_tuple[0], aff_tuple[1], all_affordances)
             except queue.Empty:
                 a = 1
-                # # print_log(process_labels[proc_num], "no tuples found.", lock)
+                # print_log(process_labels[proc_num], "no tuples found.", lock)
 
         if num_done == num_processes:
             break
 
     for proc_num in range(0, num_processes):
         process[proc_num].join()
-        # print(process_labels[proc_num] + "joined at time " + str(round(time.time()-t1,4)))
-
-    # proc_num = 0
-    # # read_q_into_affordances(process_queues[proc_num],all_affordances)
-    #
-    # proc_num = 1
-    # process[proc_num].join()
-    # print(process_labels[proc_num] + "joined at time " + str(round(time.time()-t1,4)))
-    # # read_q_into_affordances(process_queues[proc_num],all_affordances)
-    #
-    # proc_num = 2
-    # print(process_labels[proc_num] + "joined at time " + str(round(time.time()-t1,4)))
-    # # read_q_into_affordances(process_queues[proc_num],check_affordances)
-    # # process[proc_num].join()
-
-
-
+        # print(process_labels[proc_num] + "joined at time "
+        #       + str(round(time.time()-t1,4)))
 
     print()
     print()
-    # print()
-    # print(all_affordances)
-    # print()
-    # print("CHECK AGAINGST SINGLE PROCESS: ")
-    # print(check_affordances)
 
     actual_lines_processed = last_group*group_size
     duration = time.time() - t1
@@ -286,7 +268,8 @@ if __name__=='__main__':
           str(len(all_affordances)))
     print("The program took this long (seconds): " +
           str(duration))
-    print("The program processed this many lines: " + str(actual_lines_processed))
+    print("The program processed this many lines: "
+          + str(actual_lines_processed))
     lines_per_second = actual_lines_processed/(duration)
     print("Lines Processed per second is: " + str(lines_per_second))
 
